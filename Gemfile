@@ -31,7 +31,10 @@ gem 'devise', rails_version == '> 5.x' ? '> 4.x' : '~> 3.5'
 gem 'draper' if rails_version != '> 5.x'
 gem 'pundit'
 
-gem 'mongoid', '~> 4.0.0' if ENV['MONGOID']
+if ENV['MONGOID']
+  gem 'mongoid', '~> 4.0.0'
+  gem 'ransack', github: 'activerecord-hackery/ransack', branch: 'master'
+end
 
 # Utility gems used in both development & test environments
 gem 'rake', require: false
