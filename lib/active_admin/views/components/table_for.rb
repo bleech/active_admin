@@ -98,9 +98,30 @@ module ActiveAdmin
 
       def build_table_cell(col, resource)
         td class: col.html_class do
-          html = format_attribute(resource, col.data)
-          # Don't add the same Arbre twice, while still allowing format_attribute to call status_tag
-          current_arbre_element << html unless current_arbre_element.children.include? html
+          render_data col.data, item
+        end
+      end
+
+      def render_data(data, item)
+        value = if data.is_a? Proc
+          data.call item
+        elsif item.respond_to? data
+          item.public_send data
+        elsif item.respond_to? :[]
+          item[data]
+        end
+        value = pretty_format(value) if data.is_a?(Symbol)
+        value = status_tag value     if is_boolean? data, item
+        value
+      end
+
+      def is_boolean?(data, item)
+        if item.respond_to? :type_for_attribute # Rails >= 4.2
+          item.type_for_attribute(data) == :boolean
+        elsif item.respond_to? :column_for_attribute
+          attr = item.column_for_attribute(data) and attr.type == :boolean
+        elsif item.class.respond_to? :fields # Mongoid 4.0
+          field = item.class.fields[data.to_s] and field && field.type == ::Mongoid::Boolean
         end
       end
 
@@ -139,7 +160,7 @@ module ActiveAdmin
 
         attr_accessor :title, :data , :html_class
 
-        def initialize(*args, &block) 
+        def initialize(*args, &block)
           @options = args.extract_options!
 
           @title = args[0]
