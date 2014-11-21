@@ -8,7 +8,12 @@ ENV['RAILS_ENV'] = 'test'
 
 require File.expand_path('../../../spec/spec_helper', __FILE__)
 
-ENV['RAILS_ROOT'] = File.expand_path("../../../spec/rails/rails-#{ENV["RAILS"]}", __FILE__)
+ENV['RAILS_ROOT'] = if ENV['MONGOID']
+  File.expand_path("../../../spec/mongoid/rails/rails-#{ENV['RAILS']}", __FILE__)
+else
+  File.expand_path("../../../spec/rails/rails-#{ENV["RAILS"]}", __FILE__)
+end
+
 
 # Create the test app if it doesn't exists
 unless File.exists?(ENV['RAILS_ROOT'])
@@ -16,7 +21,8 @@ unless File.exists?(ENV['RAILS_ROOT'])
 end
 
 require 'rails'
-require 'active_record'
+require 'active_record' unless ENV['MONGOID']
+require 'mongoid' if ENV['MONGOID']
 require 'active_admin'
 require 'devise'
 ActiveAdmin.application.load_paths = [ENV['RAILS_ROOT'] + "/app/admin"]
@@ -100,6 +106,10 @@ if defined?(ActiveRecord::Base)
   rescue LoadError
     # ignore if database_cleaner isn't present
   end
+end
+
+if defined?(Mongoid)
+  Mongoid.default_session.drop
 end
 
 # Warden helpers to speed up login
