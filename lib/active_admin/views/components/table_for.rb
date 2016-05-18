@@ -10,8 +10,9 @@ module ActiveAdmin
       def build(obj, *attrs)
         options         = attrs.extract_options!
         @sortable       = options.delete(:sortable)
-        @resource_class = options.delete(:i18n)
         @collection     = obj.respond_to?(:each) && !obj.is_a?(Hash) ? obj : [obj]
+        @resource_class = options.delete(:i18n)
+        @resource_class ||= @collection.klass if @collection.respond_to? :klass
         @columns        = []
         @row_class      = options.delete(:row_class)
 
@@ -38,9 +39,9 @@ module ActiveAdmin
         end
 
         # Add a table cell for each item
-        @collection.each_with_index do |item, i|
-          within @tbody.children[i] do
-            build_table_cell col, item
+        @collection.each_with_index do |resource, index|
+          within @tbody.children[index] do
+            build_table_cell col, resource
           end
         end
       end
@@ -95,7 +96,7 @@ module ActiveAdmin
         end
       end
 
-      def build_table_cell(col, item)
+      def build_table_cell(col, resource)
         td class: col.html_class do
           render_data col.data, item
         end
@@ -159,7 +160,7 @@ module ActiveAdmin
 
         attr_accessor :title, :data , :html_class
 
-        def initialize(*args, &block) 
+        def initialize(*args, &block)
           @options = args.extract_options!
 
           @title = args[0]
@@ -167,7 +168,7 @@ module ActiveAdmin
           if @options.has_key?(:class)
             html_classes << @options.delete(:class)
           elsif @title.present?
-            html_classes << "col-#{@title.to_s.parameterize('_')}"
+            html_classes << "col-#{ActiveAdmin::Dependency.rails.parameterize(@title.to_s)}"
           end
           @html_class = html_classes.join(' ')
           @data = args[1] || args[0]

@@ -35,7 +35,7 @@ module ActiveAdmin
 
     describe '#decorator_class' do
       it 'returns nil by default' do
-        expect(config.decorator_class).to be_nil
+        expect(config.decorator_class).to eq nil
       end
       context 'when a decorator is defined' do
         let(:resource) { namespace.register(Post) { decorate_with PostDecorator } }
@@ -80,9 +80,9 @@ module ActiveAdmin
     describe "#belongs_to" do
 
       it "should build a belongs to configuration" do
-        expect(config.belongs_to_config).to be_nil
+        expect(config.belongs_to_config).to eq nil
         config.belongs_to :posts
-        expect(config.belongs_to_config).to_not be_nil
+        expect(config.belongs_to_config).to_not eq nil
       end
 
       it "should set the target menu to the belongs to target" do
@@ -218,12 +218,12 @@ module ActiveAdmin
       context "when breadcrumb is set" do
         context "when set to true" do
           before { config.breadcrumb = true }
-          it { is_expected.to be_truthy }
+          it { is_expected.to eq true }
         end
 
         context "when set to false" do
           before { config.breadcrumb = false }
-          it { is_expected.to be_falsey }
+          it { is_expected.to eq false }
         end
       end
     end
@@ -233,7 +233,11 @@ module ActiveAdmin
       let(:post) { double }
       before do
         if defined?(ActiveRecord)
-          allow(Post).to receive(:find_by_id).with('12345') { post }
+          if Rails::VERSION::MAJOR >= 4
+            allow(Post).to receive(:find_by).with("id" => "12345") { post }
+          else
+            allow(Post).to receive(:find_by_id).with("12345") { post }
+          end
         end
         if defined?(Mongoid)
           allow(Post).to receive(:find).with('12345') { post }
@@ -256,11 +260,18 @@ module ActiveAdmin
           let(:different_post) { double }
           before do
             allow(Post).to receive(:primary_key).and_return 'something_else'
-            allow(Post).to receive(:find_by_something_else).with('55555') { different_post }
+            if Rails::VERSION::MAJOR >= 4
+              allow(Post).to receive(:find_by).
+                with("something_else" => "55555") { different_post }
+            else
+              allow(Post).to receive(:find_by_something_else).
+                with("55555") { different_post }
+            end
           end
 
-          it 'can find the post by the custom primary key' do
-            expect(resource.find_resource('55555')).to eq different_post
+            it 'can find the post by the custom primary key' do
+              expect(resource.find_resource('55555')).to eq different_post
+            end
           end
         end
       end
@@ -283,6 +294,49 @@ module ActiveAdmin
           end
 
           expect(resource.find_resource('title-name')).to eq post
+        end
+      end
+    end
+
+    describe "delegation" do
+      let(:controller) {
+        Class.new do
+          def method_missing(name, *args, &block)
+            "called #{name}"
+          end
+        end.new
+      }
+      let(:resource) { ActiveAdmin::ResourceDSL.new(double, double) }
+
+      before do
+        expect(resource).to receive(:controller).and_return(controller)
+      end
+
+      context "filters" do
+        [
+          :before_filter, :skip_before_filter,
+          :after_filter, :skip_after_filter,
+          :around_filter, :skip_filter
+        ].each do |method|
+          it "delegates #{method}" do
+            expected = method.to_s.dup
+            expected.sub! 'filter', 'action' if ActiveAdmin::Dependency.rails >= 4
+            expect(resource.send(method)).to eq "called #{expected}"
+          end
+        end
+      end
+
+      if ActiveAdmin::Dependency.rails >= 4
+        context "actions" do
+          [
+            :before_action, :skip_before_action,
+            :after_action, :skip_after_action,
+            :around_action, :skip_action
+          ].each do |method|
+            it "delegates #{method}" do
+              expect(resource.send(method)).to eq "called #{method}"
+            end
+          end
         end
       end
     end

@@ -157,7 +157,7 @@ module ActiveAdmin
 
     def find_resource(id)
       resource = if defined?(ActiveRecord)
-        resource_class.public_send(method_for_find, id)
+        resource_class.public_send *method_for_find(id)
       else
         method, finder_key = method_for_find_mongoid
         if finder_key
@@ -183,8 +183,14 @@ module ActiveAdmin
       end
     end
 
-    def method_for_find
-      resources_configuration[:self][:finder] || "find_by_#{resource_class.primary_key}"
+    def method_for_find(id)
+      if finder = resources_configuration[:self][:finder]
+        [finder, id]
+      elsif Rails::VERSION::MAJOR >= 4
+        [:find_by, { resource_class.primary_key => id }]
+      else
+        [:"find_by_#{resource_class.primary_key}", id]
+      end
     end
 
     def default_csv_builder

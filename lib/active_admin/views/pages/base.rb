@@ -35,6 +35,10 @@ module ActiveAdmin
               text_node(favicon_link_tag(active_admin_namespace.favicon))
             end
 
+            active_admin_namespace.meta_tags.each do |name, content|
+              text_node(tag(:meta, name: name, content: content))
+            end
+
             text_node csrf_meta_tag
           end
         end
@@ -52,7 +56,7 @@ module ActiveAdmin
         end
 
         def build_unsupported_browser
-          if active_admin_namespace.unsupported_browser_matcher =~ env["HTTP_USER_AGENT"]
+          if active_admin_namespace.unsupported_browser_matcher =~ request.user_agent
             insert_tag view_factory.unsupported_browser
           end
         end

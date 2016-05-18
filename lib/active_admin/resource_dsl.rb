@@ -116,7 +116,8 @@ module ActiveAdmin
       title = options.delete(:title)
 
       controller do
-        before_filter(only: [name]) { @page_title = title } if title
+        callback = ActiveAdmin::Dependency.rails >= 4 ? :before_action : :before_filter
+        send(callback, only: [name]) { @page_title = title } if title
         define_method(name, &block || Proc.new{})
       end
     end
@@ -159,9 +160,20 @@ module ActiveAdmin
     delegate :before_save,    :after_save,    to: :controller
     delegate :before_destroy, :after_destroy, to: :controller
 
-    # Standard rails filters
-    delegate :before_filter, :skip_before_filter, :after_filter, :skip_after_filter, :around_filter, :skip_filter,
-             to: :controller
+    # This code defines both *_filter and *_action for Rails 3.2 to Rails 5.
+    actions = [
+      :before, :skip_before,
+      :after,  :skip_after,
+      :around, :skip
+    ]
+    destination = ActiveAdmin::Dependency.rails >= 4 ? :action : :filter
+    [:action, :filter].each do |name|
+      actions.each do |action|
+        define_method "#{action}_#{name}" do |*args, &block|
+          controller.public_send "#{action}_#{destination}", *args, &block
+        end
+      end
+    end
 
     # Specify which actions to create in the controller
     #

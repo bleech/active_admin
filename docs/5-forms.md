@@ -6,7 +6,7 @@ a thin DSL on top of [Formtastic](https://github.com/justinfrench/formtastic):
 ```ruby
 ActiveAdmin.register Post do
 
-  form do |f|
+  form title: 'A custom title' do |f|
     inputs 'Details' do
       input :title
       input :published_at, label: "Publish Post At"
@@ -52,13 +52,25 @@ Which looks for something like this:
 
 ```ruby
 # app/views/admin/posts/_form.html.arb
-active_admin_form_for resource do |f|
+insert_tag active_admin_form_for resource do |f|
   inputs :title, :body
   actions
 end
 ```
 
 This is a regular Rails partial so any template engine may be used.
+
+You can also use the `ActiveAdmin::FormBuilder` as builder in your Formtastic Form for use the same helpers are used in the admin file:
+
+```ruby
+  = semantic_form_for [:admin, @post], builder: ActiveAdmin::FormBuilder do |f|
+    = f.inputs "Details" do
+      = f.input :title
+    - f.has_many :taggings, sortable: :position, sortable_start: 1 do |t|
+      - t.input :tag
+    = f.actions
+
+```
 
 ## Nested Resources
 
