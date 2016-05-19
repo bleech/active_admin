@@ -96,7 +96,7 @@ module ActiveAdmin
         end
       end
 
-      def build_table_cell(col, resource)
+      def build_table_cell(col, item)
         td class: col.html_class do
           render_data col.data, item
         end
